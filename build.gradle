@@ -1,0 +1,19 @@
+plugins {
+    id 'java'
+}
+
+group = 'org.example'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    // https://github.com/scales-dev/Spreadsheet-Scripting
+    implementation 'com.github.scales-dev:Spreadsheet-Scripting:30923fa539'
+
+    // https://github.com/My-Exotic-Fruit-Work/Export-Products
+    implementation 'com.github.My-Exotic-Fruit-Work:Export-Products:acffd6500f'
+}
