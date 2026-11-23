@@ -28,7 +28,7 @@ public class Main {
       String rowCreatedTime = row.get("createdTime");
       // ignores irrelevant sale data
       if (rowCreatedTime.isEmpty() || Instant.parse(rowCreatedTime).isAfter(MIN_DATE)) {
-        String name = row.get("productName");
+        String name = getName(row.get("productName"));
         productsSold.putIfAbsent(name, new Product(0,0));
         Product details = productsSold.get(name);
 
@@ -120,6 +120,12 @@ public class Main {
     }
 
     SpreadsheetUtil.write(salesFile.getParent().resolve("output.xlsx"), output);
+  }
+
+  // matching scales.dev.exportproducts.MapProducts.getName
+  private static String getName(String name) {
+    return name
+            .replaceAll("[—–]", "-");
   }
 
   private static String fixCategoryName(String name) {
