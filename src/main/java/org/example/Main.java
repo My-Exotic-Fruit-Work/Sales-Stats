@@ -1,6 +1,7 @@
 package org.example;
 
 import scales.dev.SpreadsheetUtil;
+import scales.dev.Workbook;
 import scales.dev.Worksheet;
 import scales.dev.exportproducts.ExportProducts;
 
@@ -8,10 +9,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Main {
   private static final Instant MIN_DATE = LocalDate.of(2026, 1, 1)
@@ -24,17 +22,18 @@ public class Main {
     Worksheet sales = (Worksheet) SpreadsheetUtil.read(salesFile, true)
             .worksheets.values().toArray()[0];
 
-    ArrayList<Product> productsSold = new ArrayList<>();
+    HashMap<String, Product> productsSold = new HashMap<>();
 
-    // removes irrelevant sale data
     for (Map<String, String> row : sales.rows) {
       String rowCreatedTime = row.get("createdTime");
+      // ignores irrelevant sale data
       if (rowCreatedTime.isEmpty() || Instant.parse(rowCreatedTime).isAfter(MIN_DATE)) {
-        productsSold.add(new Product(
-                row.get("productName"),
-                Integer.parseInt(row.get("productQuantity")),
-                Double.parseDouble(row.get("productPrice"))
-        ));
+        String name = row.get("productName");
+        productsSold.putIfAbsent(name, new Product(0,0));
+        Product details = productsSold.get(name);
+
+        details.quantity += Integer.parseInt(row.get("productQuantity"));
+        details.price += Double.parseDouble(row.get("productPrice"));
       }
       else break;
     }
@@ -47,29 +46,80 @@ public class Main {
     System.out.println("Parsed product data");
 
     Map<String, ArrayList<String>> nameToCategoriesMap = new HashMap<>();
+
     for (Map<String, String> row : products.rows) {
       String action = row.get("Action");
       if (!action.equals("Add Product")) continue;
 
-      ArrayList<String> categories = new ArrayList<>();
+      ArrayList<String> productCategories = new ArrayList<>();
       String mainCategory = fixCategoryName(row.get("CategoryPath"));
       if (mainCategory.isBlank()) continue;
 
-      categories.add(fixCategoryName(row.get("CategoryPath")));
+      productCategories.add(fixCategoryName(row.get("CategoryPath")));
       String extraCategoryColumn = fixCategoryName(row.get("CategoryManagement"));
       if (!extraCategoryColumn.isBlank()) {
         String[] extraCategories = extraCategoryColumn.split(":");
-        categories.addAll(List.of(extraCategories));
+        productCategories.addAll(List.of(extraCategories));
       }
 
       nameToCategoriesMap.put(
               row.get("Name"),
-              categories
+              productCategories
       );
     }
     System.out.println("Parsed categories");
 
-    System.out.println(nameToCategoriesMap);
+    Map<String, Worksheet> worksheets = new LinkedHashMap<>();
+
+    Worksheet overall = new Worksheet(new ArrayList<>());
+    worksheets.put("Overall", overall);
+
+    HashMap<String, Product> categoryStats = new HashMap<>();
+    ArrayList<Map<String, String>> categoryStatsArray = new ArrayList<>();
+    worksheets.put("Categories", new Worksheet(categoryStatsArray));
+
+    Workbook output = new Workbook(worksheets);
+    for (Map.Entry<String, Product> productSet : productsSold.entrySet()) {
+      String productName = productSet.getKey();
+      Product productStats = productSet.getValue();
+
+      List<String> categories = nameToCategoriesMap.get(productName);
+      if (categories == null) categories = List.of("none");
+
+      Map<String, String> productStatsMap = Map.of(
+              "Name", productName,
+              "Quantity Sold", Integer.toString(productStats.quantity),
+              "Sales Revenue", Double.toString(productStats.price)
+      );
+
+      overall.rows.add(productStatsMap);
+
+      for (String category : categories) {
+        worksheets.putIfAbsent(category, new Worksheet(new ArrayList<>()));
+        Worksheet worksheet = worksheets.get(category);
+
+        worksheet.rows.add(productStatsMap);
+
+        categoryStats.putIfAbsent(category, new Product(0,0));
+        Product categorySales = categoryStats.get(category);
+
+        categorySales.quantity += productStats.quantity;
+        categorySales.price += productStats.price;
+      }
+    }
+
+    // my brain is NOT working, im sure theres SO much wrong with the logic behind all the code in this project
+    for (Map.Entry<String, Product> category : categoryStats.entrySet()) {
+      Map<String, String> productStatsMap = Map.of(
+              "Name", category.getKey(),
+              "Quantity Sold", Integer.toString(category.getValue().quantity),
+              "Sales Revenue", Double.toString(category.getValue().price)
+      );
+
+      categoryStatsArray.add(productStatsMap);
+    }
+
+    SpreadsheetUtil.write(salesFile.getParent().resolve("output.xlsx"), output);
   }
 
   private static String fixCategoryName(String name) {
@@ -77,5 +127,13 @@ public class Main {
             .replace("Home > Shop Online > ", "")
             .replace("Home > Shop Online", "");
   }
-  private record Product(String name, int quantity, double price) {}
+  private static class Product {
+    public int quantity;
+    public double price;
+
+    public Product(int quantity, double price) {
+      this.quantity = quantity;
+      this.price = price;
+    }
+  }
 }
