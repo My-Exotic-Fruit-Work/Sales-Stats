@@ -54,9 +54,11 @@ public class Main {
 
       ArrayList<String> productCategories = new ArrayList<>();
       String mainCategory = fixCategoryName(row.get("CategoryPath"));
-      if (mainCategory.isBlank()) continue;
+      if (mainCategory.isBlank()) {
+        mainCategory = "nocategory";
+      }
 
-      productCategories.add(fixCategoryName(row.get("CategoryPath")));
+      productCategories.add(mainCategory);
       String extraCategoryColumn = fixCategoryName(row.get("CategoryManagement"));
       if (!extraCategoryColumn.isBlank()) {
         String[] extraCategories = extraCategoryColumn.split(":");
@@ -85,13 +87,12 @@ public class Main {
       Product productStats = productSet.getValue();
 
       List<String> categories = nameToCategoriesMap.get(productName);
-      if (categories == null) categories = List.of("none");
-
+      if (categories == null) continue;
 
       Map<String, String> productStatsMap = new LinkedHashMap<>();
       productStatsMap.put("Name", productName);
       productStatsMap.put("Quantity Sold", Integer.toString(productStats.quantity));
-      productStatsMap.put("Sales Revenue", outputRevenue(productStats.price));
+      productStatsMap.put("Sales Revenue (£)", outputRevenue(productStats.price));
 
       overall.rows.add(productStatsMap);
 
@@ -106,24 +107,27 @@ public class Main {
 
         categorySales.quantity += productStats.quantity;
         categorySales.price += productStats.price;
+
+        worksheet.rows.sort(Comparator.comparingDouble(r -> -Double.parseDouble(r.get("Sales Revenue (£)"))));
       }
     }
+
 
     // my brain is NOT working, im sure theres SO much wrong with the logic behind all the code in this project
     for (Map.Entry<String, Product> category : categoryStats.entrySet()) {
       Map<String, String> productStatsMap = new LinkedHashMap<>();
       productStatsMap.put("Name", category.getKey());
       productStatsMap.put("Quantity Sold", Integer.toString(category.getValue().quantity));
-      productStatsMap.put("Sales Revenue", outputRevenue(category.getValue().price));
+      productStatsMap.put("Sales Revenue (£)", outputRevenue(category.getValue().price));
 
       categoryStatsArray.add(productStatsMap);
     }
 
-    SpreadsheetUtil.write(salesFile.getParent().resolve("output.xlsx"), output);
+    SpreadsheetUtil.write(salesFile.getParent().resolve("sales-this-year.xlsx"), output);
   }
 
   private static String outputRevenue(double value) {
-    return String.format("£%.0f", value);
+    return String.format("%.0f", value);
   }
 
   private static String getName(String name) {
