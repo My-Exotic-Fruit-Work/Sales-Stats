@@ -63,7 +63,7 @@ public class Main {
       }
 
       nameToCategoriesMap.put(
-              row.get("Name"),
+              getName(row.get("Name")),
               productCategories
       );
     }
@@ -86,11 +86,11 @@ public class Main {
       List<String> categories = nameToCategoriesMap.get(productName);
       if (categories == null) categories = List.of("none");
 
-      Map<String, String> productStatsMap = Map.of(
-              "Name", productName,
-              "Quantity Sold", Integer.toString(productStats.quantity),
-              "Sales Revenue", Double.toString(productStats.price)
-      );
+
+      Map<String, String> productStatsMap = new LinkedHashMap<>();
+      productStatsMap.put("Name", productName);
+      productStatsMap.put("Quantity Sold", Integer.toString(productStats.quantity));
+      productStatsMap.put("Sales Revenue", outputRevenue(productStats.price));
 
       overall.rows.add(productStatsMap);
 
@@ -110,11 +110,10 @@ public class Main {
 
     // my brain is NOT working, im sure theres SO much wrong with the logic behind all the code in this project
     for (Map.Entry<String, Product> category : categoryStats.entrySet()) {
-      Map<String, String> productStatsMap = Map.of(
-              "Name", category.getKey(),
-              "Quantity Sold", Integer.toString(category.getValue().quantity),
-              "Sales Revenue", Double.toString(category.getValue().price)
-      );
+      Map<String, String> productStatsMap = new LinkedHashMap<>();
+      productStatsMap.put("Name", category.getKey());
+      productStatsMap.put("Quantity Sold", Integer.toString(category.getValue().quantity));
+      productStatsMap.put("Sales Revenue", outputRevenue(category.getValue().price));
 
       categoryStatsArray.add(productStatsMap);
     }
@@ -122,10 +121,14 @@ public class Main {
     SpreadsheetUtil.write(salesFile.getParent().resolve("output.xlsx"), output);
   }
 
-  // matching scales.dev.exportproducts.MapProducts.getName
+  private static String outputRevenue(double value) {
+    return String.format("£%.0f", value);
+  }
+
   private static String getName(String name) {
     return name
-            .replaceAll("[—–]", "-");
+            .replaceAll("[^A-Za-z0-9()'\"]", " ")
+            .replaceAll("\\s+", " ");
   }
 
   private static String fixCategoryName(String name) {

@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
     // https://jitpack.io/#scales-dev/Spreadsheet-Scripting
-    implementation 'com.github.scales-dev:Spreadsheet-Scripting:30923fa539'
+    implementation 'com.github.scales-dev:Spreadsheet-Scripting:8c076cc6a6'
 
     // https://jitpack.io/#My-Exotic-Fruit-Work/Export-Products
     implementation 'com.github.My-Exotic-Fruit-Work:Export-Products:20ecac73ac'
