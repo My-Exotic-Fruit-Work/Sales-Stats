@@ -32,8 +32,9 @@ public class Main {
         productsSold.putIfAbsent(name, new Product(0,0));
         Product details = productsSold.get(name);
 
-        details.quantity += Integer.parseInt(row.get("productQuantity"));
-        details.price += Double.parseDouble(row.get("productPrice"));
+        int quantity = Integer.parseInt(row.get("productQuantity"));
+        details.quantity += quantity;
+        details.price += Double.parseDouble(row.get("productPrice")) * quantity;
       }
       else break;
     }
